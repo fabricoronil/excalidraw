@@ -699,7 +699,7 @@
       "mermaidParseError": "Error de sintaxis de Mermaid"
     },
     "rateLimit": {
-      "messageLimit": "Has alcanzado el límite de IA en el plan gratuito. Prueba Excalidraw+ para obtener más o vuelve mañana.",
+      "messageLimit": "Alcanzaste el límite diario de IA del servicio gratuito compartido. Volvé a intentar mañana.",
       "generalRateLimit": "Espera un momento, ¡vas demasiado rápido para nosotros! Por favor, espera un instante antes de intentarlo de nuevo.",
       "messageLimitInputPlaceholder": "Has alcanzado tu límite de mensajes\n"
     },
