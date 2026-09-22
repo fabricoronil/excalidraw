@@ -41,6 +41,7 @@ import {
   GithubIcon,
   XBrandIcon,
   DiscordIcon,
+  historyIcon,
   usersIcon,
   share,
   youtubeIcon,
@@ -91,6 +92,7 @@ import {
   SYNC_BROWSER_TABS_TIMEOUT,
 } from "./app_constants";
 import Collab, {
+  activeRoomLinkAtom,
   collabAPIAtom,
   isCollaboratingAtom,
   isOfflineAtom,
@@ -99,6 +101,10 @@ import Collab, {
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
+import {
+  RecentFilesDialog,
+  recentFilesDialogOpenAtom,
+} from "./components/RecentFiles/RecentFilesDialog";
 import { TopErrorBoundary } from "./components/TopErrorBoundary";
 
 import {
@@ -123,6 +129,12 @@ import {
   localStorageQuotaExceededAtom,
 } from "./data/LocalData";
 import { isBrowserStorageStateNewer } from "./data/tabSync";
+import {
+  RecentFiles,
+  getCurrentLocalFileId,
+  newLocalFileId,
+  setCurrentLocalFileId,
+} from "./data/recentFiles";
 import { ShareDialog, shareDialogStateAtom } from "./share/ShareDialog";
 import CollabError, { collabErrorIndicatorAtom } from "./collab/CollabError";
 import { useHandleAppTheme } from "./useHandleAppTheme";
@@ -139,6 +151,7 @@ import { AIComponents } from "./components/AI";
 import "./index.scss";
 
 import type { CollabAPI } from "./collab/Collab";
+import type { RecentFile } from "./data/recentFiles";
 
 polyfill();
 
@@ -820,6 +833,111 @@ const ExcalidrawWrapper = () => {
   );
 
   // ---------------------------------------------------------------------------
+  // Archivos recientes
+  // ---------------------------------------------------------------------------
+
+  const [, setRecentFilesDialogOpen] = useAtom(recentFilesDialogOpenAtom);
+  const onRecentFilesDialogOpen = useCallback(
+    () => setRecentFilesDialogOpen(true),
+    [setRecentFilesDialogOpen],
+  );
+
+  const getCurrentFileId = useCallback(() => {
+    if (collabAPI?.isCollaborating()) {
+      const link = appJotaiStore.get(activeRoomLinkAtom);
+      const roomLinkData = link ? getCollaborationLinkData(link) : null;
+      return roomLinkData ? `room:${roomLinkData.roomId}` : null;
+    }
+    return getCurrentLocalFileId();
+  }, [collabAPI]);
+
+  /** leaves the current room (if any) or persists the current drawing */
+  const leaveCurrentFile = useCallback(() => {
+    if (collabAPI?.isCollaborating()) {
+      collabAPI.stopCollaboration(false);
+      window.history.pushState({}, APP_NAME, window.location.origin);
+    } else {
+      LocalData.flushSave();
+    }
+  }, [collabAPI]);
+
+  const openRecentFile = useCallback(
+    (file: RecentFile) => {
+      if (!excalidrawAPI) {
+        return;
+      }
+      leaveCurrentFile();
+
+      if (file.kind === "room") {
+        // joining goes through the regular hashchange → initializeScene path
+        window.location.hash = `room=${file.roomId},${file.roomKey}`;
+        return;
+      }
+
+      setCurrentLocalFileId(file.id);
+      const currentAppState = excalidrawAPI.getAppState();
+      excalidrawAPI.updateScene({
+        elements: restoreElements(file.elements, null, {
+          repairBindings: true,
+        }),
+        appState: {
+          ...restoreAppState(file.appState, null),
+          // the entry's name wins: it may have been renamed from the list
+          name: file.name || null,
+          theme: currentAppState.theme,
+          isLoading: false,
+        },
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      excalidrawAPI.history.clear();
+      RecentFiles.markLocalOpened(file.id);
+
+      if (file.fileIds.length) {
+        LocalData.fileStorage
+          .getFiles(file.fileIds)
+          .then(({ loadedFiles, erroredFiles }) => {
+            if (loadedFiles.length) {
+              excalidrawAPI.addFiles(loadedFiles);
+            }
+            updateStaleImageStatuses({
+              excalidrawAPI,
+              erroredFiles,
+              elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
+            });
+          });
+      }
+    },
+    [excalidrawAPI, leaveCurrentFile],
+  );
+
+  const createNewDrawing = useCallback(() => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    leaveCurrentFile();
+    setCurrentLocalFileId(newLocalFileId());
+    excalidrawAPI.resetScene();
+    excalidrawAPI.updateScene({
+      appState: { isLoading: false },
+      captureUpdate: CaptureUpdateAction.NEVER,
+    });
+  }, [excalidrawAPI, leaveCurrentFile]);
+
+  const renameRecentFile = useCallback(
+    (file: RecentFile, name: string) => {
+      RecentFiles.rename(file.id, name);
+      // keep the canvas name in sync so the next autosave doesn't revert it
+      if (excalidrawAPI && file.id === getCurrentFileId()) {
+        excalidrawAPI.updateScene({
+          appState: { name },
+          captureUpdate: CaptureUpdateAction.NEVER,
+        });
+      }
+    },
+    [excalidrawAPI, getCurrentFileId],
+  );
+
+  // ---------------------------------------------------------------------------
   // onExport — intercepts file save to wait for pending image loads
   // ---------------------------------------------------------------------------
   const onExport: Required<ExcalidrawProps>["onExport"] = useCallback(
@@ -929,7 +1047,10 @@ const ExcalidrawWrapper = () => {
               <LiveCollaborationTrigger
                 isCollaborating={isCollaborating}
                 onSelect={() =>
-                  setShareDialogState({ isOpen: true, type: "collaborationOnly" })
+                  setShareDialogState({
+                    isOpen: true,
+                    type: "collaborationOnly",
+                  })
                 }
                 editorInterface={editorInterface}
               />
@@ -949,6 +1070,7 @@ const ExcalidrawWrapper = () => {
       >
         <AppMainMenu
           onCollabDialogOpen={onCollabDialogOpen}
+          onRecentFilesDialogOpen={onRecentFilesDialogOpen}
           isCollaborating={isCollaborating}
           isCollabEnabled={!isCollabDisabled}
           theme={appTheme}
@@ -956,6 +1078,7 @@ const ExcalidrawWrapper = () => {
         />
         <AppWelcomeScreen
           onCollabDialogOpen={onCollabDialogOpen}
+          onRecentFilesDialogOpen={onRecentFilesDialogOpen}
           isCollabEnabled={!isCollabDisabled}
         />
         <OverwriteConfirmDialog>
@@ -987,6 +1110,13 @@ const ExcalidrawWrapper = () => {
           <Collab excalidrawAPI={excalidrawAPI} />
         )}
 
+        <RecentFilesDialog
+          getCurrentFileId={getCurrentFileId}
+          onOpenFile={openRecentFile}
+          onNewDrawing={createNewDrawing}
+          onRenameFile={renameRecentFile}
+        />
+
         <ShareDialog
           collabAPI={collabAPI}
           onExportToBackend={async () => {
@@ -1012,6 +1142,21 @@ const ExcalidrawWrapper = () => {
 
         <CommandPalette
           customCommandPaletteItems={[
+            {
+              label: t("recentFiles.title"),
+              category: DEFAULT_CATEGORIES.app,
+              keywords: [
+                "recent",
+                "files",
+                "open",
+                "archivos",
+                "recientes",
+                "abrir",
+                "history",
+              ],
+              icon: historyIcon,
+              perform: onRecentFilesDialogOpen,
+            },
             {
               label: t("labels.liveCollaboration"),
               category: DEFAULT_CATEGORIES.app,
@@ -1070,7 +1215,10 @@ const ExcalidrawWrapper = () => {
                 "invite",
               ],
               perform: async () => {
-                setShareDialogState({ isOpen: true, type: "collaborationOnly" });
+                setShareDialogState({
+                  isOpen: true,
+                  type: "collaborationOnly",
+                });
               },
             },
             {

@@ -4,6 +4,7 @@ export const INITIAL_SCENE_UPDATE_TIMEOUT = 5000;
 export const FILE_UPLOAD_TIMEOUT = 300;
 export const LOAD_IMAGES_TIMEOUT = 500;
 export const SYNC_FULL_SCENE_INTERVAL_MS = 20000;
+export const ROOM_SNAPSHOT_INTERVAL_MS = 3000;
 export const SYNC_BROWSER_TABS_TIMEOUT = 50;
 export const CURSOR_SYNC_TIMEOUT = 33; // ~30fps
 export const DELETED_ELEMENT_TIMEOUT = 24 * 60 * 60 * 1000; // 1 day
@@ -27,6 +28,7 @@ export enum WS_SUBTYPES {
   MOUSE_LOCATION = "MOUSE_LOCATION",
   IDLE_STATUS = "IDLE_STATUS",
   USER_VISIBLE_SCENE_BOUNDS = "USER_VISIBLE_SCENE_BOUNDS",
+  ROOM_VISITORS = "ROOM_VISITORS",
 }
 
 export const FIREBASE_STORAGE_PREFIXES = {
@@ -42,11 +44,13 @@ export const STORAGE_KEYS = {
   LOCAL_STORAGE_COLLAB: "excalidraw-collab",
   LOCAL_STORAGE_THEME: "excalidraw-theme",
   LOCAL_STORAGE_DEBUG: "excalidraw-debug",
+  LOCAL_STORAGE_CURRENT_FILE_ID: "excalidraw-current-file-id",
   VERSION_DATA_STATE: "version-dataState",
   VERSION_FILES: "version-files",
 
   IDB_LIBRARY: "excalidraw-library",
   IDB_TTD_CHATS: "excalidraw-ttd-chats",
+  IDB_RECENT_FILES: "excalidraw-recent-files",
 
   // do not use apart from migrations
   __LEGACY_LOCAL_STORAGE_LIBRARY: "excalidraw-library",

@@ -1,9 +1,11 @@
+import { historyIcon } from "@excalidraw/excalidraw/components/icons";
 import { useI18n } from "@excalidraw/excalidraw/i18n";
 import { WelcomeScreen } from "@excalidraw/excalidraw/index";
 import React from "react";
 
 export const AppWelcomeScreen: React.FC<{
   onCollabDialogOpen: () => any;
+  onRecentFilesDialogOpen: () => any;
   isCollabEnabled: boolean;
 }> = React.memo((props) => {
   const { t } = useI18n();
@@ -31,6 +33,12 @@ export const AppWelcomeScreen: React.FC<{
           {headingContent}
         </WelcomeScreen.Center.Heading>
         <WelcomeScreen.Center.Menu>
+          <WelcomeScreen.Center.MenuItem
+            icon={historyIcon}
+            onSelect={() => props.onRecentFilesDialogOpen()}
+          >
+            {t("recentFiles.menuItem")}
+          </WelcomeScreen.Center.MenuItem>
           <WelcomeScreen.Center.MenuItemLoadScene />
           <WelcomeScreen.Center.MenuItemHelp />
           {props.isCollabEnabled && (

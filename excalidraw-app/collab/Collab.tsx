@@ -61,6 +61,7 @@ import {
   LOAD_IMAGES_TIMEOUT,
   WS_SUBTYPES,
   SYNC_FULL_SCENE_INTERVAL_MS,
+  ROOM_SNAPSHOT_INTERVAL_MS,
   WS_EVENTS,
 } from "../app_constants";
 import {
@@ -82,6 +83,7 @@ import {
   saveFilesToFirebase,
   saveToFirebase,
 } from "../data/firebase";
+import { RecentFiles, setCurrentLocalFileId } from "../data/recentFiles";
 import {
   importUsernameFromLocalStorage,
   saveUsernameToLocalStorage,
@@ -293,6 +295,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
   };
 
   private onUnload = () => {
+    this.queueRoomSnapshot.flush();
     this.destroySocketClient({ isUnload: true });
   };
 
@@ -363,6 +366,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
   };
 
   stopCollaboration = (keepRemoteState = true) => {
+    this.queueRoomSnapshot.flush();
     this.queueBroadcastAllElements.cancel();
     this.queueSaveToFirebase.cancel();
     this.loadImageFiles.cancel();
@@ -393,6 +397,10 @@ class Collab extends PureComponent<CollabProps, CollabState> {
       this.destroySocketClient();
 
       LocalData.fileStorage.reset();
+
+      // the room's content becomes a new local drawing instead of
+      // overwriting whichever drawing was open before joining
+      setCurrentLocalFileId(null);
 
       const elements = this.excalidrawAPI
         .getSceneElementsIncludingDeleted()
@@ -514,6 +522,12 @@ class Collab extends PureComponent<CollabProps, CollabState> {
 
     this.setIsCollaborating(true);
     LocalData.pauseSave("collaboration");
+
+    RecentFiles.openRoom({
+      roomId,
+      roomKey,
+      role: existingRoomLinkData ? "guest" : "owner",
+    });
 
     const { default: socketIOClient } = await import(
       /* webpackChunkName: "socketIoClient" */ "socket.io-client"
@@ -674,6 +688,20 @@ class Collab extends PureComponent<CollabProps, CollabState> {
               userState,
               username,
             });
+            break;
+          }
+
+          case WS_SUBTYPES.ROOM_VISITORS: {
+            if (
+              this.portal.roomId &&
+              Array.isArray(decryptedData.payload?.visitors)
+            ) {
+              RecentFiles.mergeRoomParticipants(
+                this.portal.roomId,
+                decryptedData.payload.visitors,
+                this.state.username,
+              );
+            }
             break;
           }
 
@@ -912,9 +940,36 @@ class Collab extends PureComponent<CollabProps, CollabState> {
     collaborators.set(socketId, user);
     this.collaborators = collaborators;
 
+    if (!isCurrentUser && user.username && this.portal.roomId) {
+      RecentFiles.recordParticipants(
+        this.portal.roomId,
+        [user.username],
+        this.state.username,
+      );
+    }
+
     this.excalidrawAPI.updateScene({
       collaborators,
     });
+  };
+
+  /** tells the room everyone we've seen in it, so late joiners learn too */
+  broadcastRoomVisitors = async () => {
+    const roomId = this.portal.roomId;
+    if (!roomId) {
+      return;
+    }
+    const room = await RecentFiles.getRoom(roomId);
+    const now = Date.now();
+    const visitors = [...(room?.participants ?? [])];
+    if (this.state.username) {
+      visitors.push({
+        username: this.state.username,
+        firstSeen: room?.openedAt ?? now,
+        lastSeen: now,
+      });
+    }
+    this.portal.broadcastRoomVisitors(visitors);
   };
 
   public setLastBroadcastedOrReceivedSceneVersion = (version: number) => {
@@ -971,7 +1026,18 @@ class Collab extends PureComponent<CollabProps, CollabState> {
   syncElements = (elements: readonly OrderedExcalidrawElement[]) => {
     this.broadcastElements(elements);
     this.queueSaveToFirebase();
+    this.queueRoomSnapshot();
   };
+
+  /** keeps the room's entry in "Archivos recientes" up to date */
+  queueRoomSnapshot = throttle(() => {
+    if (this.portal.roomId) {
+      RecentFiles.saveRoomSnapshot(
+        this.portal.roomId,
+        this.excalidrawAPI.getSceneElementsIncludingDeleted(),
+      );
+    }
+  }, ROOM_SNAPSHOT_INTERVAL_MS);
 
   queueBroadcastAllElements = throttle(() => {
     this.portal.broadcastScene(

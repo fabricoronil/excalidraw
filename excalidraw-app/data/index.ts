@@ -40,6 +40,8 @@ import { saveFilesToFirebase } from "./firebase";
 
 import type { WS_SUBTYPES } from "../app_constants";
 
+import type { RecentFileParticipant } from "./recentFiles";
+
 export type SyncableExcalidrawElement = OrderedExcalidrawElement &
   MakeBrand<"SyncableExcalidrawElement">;
 
@@ -116,6 +118,13 @@ export type SocketUpdateDataSource = {
       socketId: SocketId;
       userState: UserIdleState;
       username: string;
+    };
+  };
+  ROOM_VISITORS: {
+    type: WS_SUBTYPES.ROOM_VISITORS;
+    payload: {
+      /** everyone the sender has seen in this room, including the sender */
+      visitors: RecentFileParticipant[];
     };
   };
 };

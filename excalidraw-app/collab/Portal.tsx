@@ -52,6 +52,7 @@ class Portal {
         this.collab.getSceneElementsIncludingDeleted(),
         /* syncAll */ true,
       );
+      this.collab.broadcastRoomVisitors();
     });
     this.socket.on("room-user-change", (clients: SocketId[]) => {
       this.collab.setCollaborators(clients);
@@ -245,6 +246,16 @@ class Portal {
         roomId,
       );
     }
+  };
+
+  broadcastRoomVisitors = (
+    visitors: SocketUpdateDataSource["ROOM_VISITORS"]["payload"]["visitors"],
+  ) => {
+    const data: SocketUpdateDataSource["ROOM_VISITORS"] = {
+      type: WS_SUBTYPES.ROOM_VISITORS,
+      payload: { visitors },
+    };
+    return this._broadcastSocketData(data as SocketUpdateData);
   };
 
   broadcastUserFollowed = (payload: OnUserFollowedPayload) => {

@@ -44,6 +44,7 @@ import { SAVE_TO_LOCAL_STORAGE_TIMEOUT, STORAGE_KEYS } from "../app_constants";
 import { FileManager } from "./FileManager";
 import { FileStatusStore } from "./fileStatusStore";
 import { Locker } from "./Locker";
+import { RecentFiles } from "./recentFiles";
 import { updateBrowserStateVersion } from "./tabSync";
 
 const filesStore = createStore("files-db", "files-store");
@@ -52,6 +53,11 @@ export const localStorageQuotaExceededAtom = atom(false);
 
 class LocalFileManager extends FileManager {
   clearObsoleteFiles = async (opts: { currentFileIds: FileId[] }) => {
+    // images of other drawings in "Archivos recientes" must survive too
+    const keptFileIds = new Set([
+      ...opts.currentFileIds,
+      ...(await RecentFiles.getAllFileIds()),
+    ]);
     await entries(filesStore).then((entries) => {
       for (const [id, imageData] of entries as [FileId, BinaryFileData][]) {
         // if image is unused (not on canvas) & is older than 1 day, delete it
@@ -61,7 +67,7 @@ class LocalFileManager extends FileManager {
         if (
           (!imageData.lastRetrieved ||
             Date.now() - imageData.lastRetrieved > 24 * 3600 * 1000) &&
-          !opts.currentFileIds.includes(id as FileId)
+          !keptFileIds.has(id as FileId)
         ) {
           del(id, filesStore);
         }
@@ -123,6 +129,7 @@ export class LocalData {
       onFilesSaved: () => void,
     ) => {
       saveDataStateToLocalStorage(elements, appState);
+      RecentFiles.saveCurrentLocal(elements, appState);
 
       await this.fileStorage.saveFiles({
         elements,
