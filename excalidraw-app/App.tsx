@@ -1009,7 +1009,7 @@ const ExcalidrawWrapper = () => {
               <LiveCollaborationTrigger
                 isCollaborating={isCollaborating}
                 onSelect={() =>
-                  setShareDialogState({ isOpen: true, type: "share" })
+                  setShareDialogState({ isOpen: true, type: "collaborationOnly" })
                 }
                 editorInterface={editorInterface}
               />
@@ -1168,7 +1168,7 @@ const ExcalidrawWrapper = () => {
                 "invite",
               ],
               perform: async () => {
-                setShareDialogState({ isOpen: true, type: "share" });
+                setShareDialogState({ isOpen: true, type: "collaborationOnly" });
               },
             },
             {
