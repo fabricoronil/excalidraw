@@ -1,4 +1,4 @@
-import { act, queryByTestId } from "@testing-library/react";
+import { act } from "@testing-library/react";
 import React from "react";
 import { vi } from "vitest";
 
@@ -243,33 +243,45 @@ describe("library", () => {
 });
 
 describe("library menu", () => {
-  it("should load library from file picker", async () => {
+  // en este fork el panel es la "Biblioteca de diagramas" de la cátedra, sin
+  // biblioteca personal ni menú para importar archivos
+  it("should show the diagram sections and insert a piece", async () => {
     const { container } = await render(<Excalidraw />);
 
-    const latestLibrary = await h.app.library.getLatestLibrary();
-    expect(latestLibrary.length).toBe(0);
+    fireEvent.click(container.querySelector(".sidebar-trigger")!);
 
-    const libraryButton = container.querySelector(".sidebar-trigger");
+    const panel = container.querySelector(".diagram-library")!;
+    expect(panel).not.toBeNull();
+    const titles = Array.from(
+      panel.querySelectorAll(".diagram-library__section-title"),
+    ).map((el) => el.textContent);
+    expect(titles).toContain("Diagrama de clases");
+    expect(titles).toContain("Diagrama de casos de uso");
+    expect(titles).toContain("Diagrama de secuencia");
 
-    fireEvent.click(libraryButton!);
-    fireEvent.click(
-      queryByTestId(
-        container.querySelector(".layer-ui__library")!,
-        "dropdown-menu-button",
-      )!,
-    );
-    fireEvent.click(queryByTestId(container, "lib-dropdown--load")!);
+    const classCard = await waitFor(() => {
+      const card = Array.from(
+        panel.querySelectorAll<HTMLButtonElement>(
+          "button.diagram-library__piece",
+        ),
+      ).find(
+        (el) =>
+          el.querySelector(".diagram-library__piece-name")?.textContent ===
+          "Clase",
+      );
+      expect(card).toBeTruthy();
+      return card!;
+    });
+    fireEvent.click(classCard);
 
-    const libraryItems = parseLibraryJSON(await libraryJSONPromise);
-
-    await waitFor(async () => {
-      const latestLibrary = await h.app.library.getLatestLibrary();
-      expect(latestLibrary.length).toBeGreaterThan(0);
-      expect(latestLibrary.length).toBe(libraryItems.length);
-      const { versionNonce, ...strippedElement } = libraryItems[0]?.elements[0]; // stripped due to mutations
-      expect(latestLibrary[0].elements).toEqual([
-        expect.objectContaining(strippedElement),
-      ]);
+    await waitFor(() => {
+      const elements = h.elements.filter((el) => !el.isDeleted);
+      expect(elements.some((el) => el.type === "rectangle")).toBe(true);
+      expect(
+        elements
+          .filter((el) => el.type === "text")
+          .map((el) => (el as any).text),
+      ).toEqual(expect.arrayContaining(["Clase", "- atributo : Tipo"]));
     });
   });
 });
