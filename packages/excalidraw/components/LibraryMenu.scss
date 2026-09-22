@@ -6,6 +6,9 @@
     flex-direction: column;
 
     flex: 1 1 auto;
+    // sin esto el panel crece con su contenido y la Biblioteca de diagramas
+    // no tiene altura fija sobre la cual scrollear
+    min-height: 0;
   }
 
   .library-actions-counter {
