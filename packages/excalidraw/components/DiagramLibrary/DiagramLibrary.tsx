@@ -34,7 +34,16 @@ const loadOpenSections = (): string[] => {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) {
-        return parsed.filter((id) => typeof id === "string");
+        const current = parsed.filter(
+          (id) =>
+            typeof id === "string" &&
+            DIAGRAM_SECTIONS.some((section) => section.id === id),
+        );
+        // Migrar secciones guardadas de la biblioteca anterior; conservar
+        // una lista vacía cuando el usuario cerró todas deliberadamente.
+        return parsed.length && !current.length
+          ? [DIAGRAM_SECTIONS[0].id]
+          : current;
       }
     }
   } catch {}
@@ -315,8 +324,12 @@ export const DiagramLibrary = ({
       ) : (
         <>
           <div className="diagram-library__heading">
-            <h2>Biblioteca de diagramas</h2>
-            <p>Hacé clic o arrastrá una pieza al lienzo.</p>
+            <h2>Booch y Patrones de diseño</h2>
+            <p>
+              Elegí una notación. Hacé clic o arrastrá una pieza. Las
+              referencias están en cada pieza; el MCP permite consultar las
+              figuras originales.
+            </p>
           </div>
           {DIAGRAM_SECTIONS.map((section) => {
             const open = openSections.includes(section.id);

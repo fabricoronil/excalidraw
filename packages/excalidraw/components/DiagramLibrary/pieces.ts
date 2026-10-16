@@ -1,9 +1,5 @@
-// Piezas de la "Biblioteca de diagramas": notación de la cátedra de
-// Paradigmas, sacada de los dos libros (Booch, "Análisis y diseño orientado a
-// objetos", y Jacobson/Booch/Rumbaugh, "El Proceso Unificado"). La base es la
-// notación UML del libro del Proceso Unificado; las piezas propias de Booch van
-// en su propio grupo. Los códigos entre paréntesis (CLA-07, CU-05...) son los
-// de ~/reglas-diagramas-catedra.md.
+// Referencias exclusivas: Booch 2.ª edición y Patrones de diseño.
+// Las piezas son adaptaciones editables; cada hint identifica la fuente.
 
 import { FONT_FAMILY } from "@excalidraw/common";
 import { convertToExcalidrawElements } from "@excalidraw/element";
@@ -205,15 +201,6 @@ const arrow = (
   roundness: null,
 });
 
-/** subraya el texto con ese id (nombres de objetos, UML) */
-const underline = (textId: string): Skeleton => ({
-  ...line(0, 0, [
-    [0, 0],
-    [10, 0],
-  ]),
-  customData: { underline: textId },
-});
-
 const textHeight = (lines: number, size = FONT_SIZE) =>
   Math.round(lines * size * LINE_HEIGHT);
 
@@ -270,134 +257,6 @@ const classBox = (
   return els;
 };
 
-/** caja de objeto: nombre subrayado y, opcional, atributos con valor */
-const objectBox = (
-  x: number,
-  y: number,
-  name: string,
-  key: string,
-  opts: { width?: number; attributes?: string[] } = {},
-): Skeleton[] => {
-  const width = opts.width ?? 200;
-  const pad = 8;
-  const nameId = `${key}-name`;
-  const headerHeight = textHeight(1) + pad * 2 + 2;
-  const els: Skeleton[] = [];
-  const attrHeight = opts.attributes
-    ? textHeight(opts.attributes.length) + pad * 2
-    : 0;
-  els.push(rect(x, y, width, headerHeight + attrHeight));
-  els.push(text(x + width / 2, y + pad, name, { center: true, id: nameId }));
-  els.push(underline(nameId));
-  if (opts.attributes) {
-    els.push(
-      line(x, y + headerHeight, [
-        [0, 0],
-        [width, 0],
-      ]),
-    );
-    els.push(text(x + pad, y + headerHeight + pad, opts.attributes.join("\n")));
-  }
-  return els;
-};
-
-/** monigote de actor con el nombre debajo */
-const stickFigure = (
-  x: number,
-  y: number,
-  name: string,
-  opts: { underlineKey?: string } = {},
-): Skeleton[] => {
-  const cx = x + 20;
-  const nameId = opts.underlineKey ? `${opts.underlineKey}-name` : undefined;
-  const els: Skeleton[] = [
-    ellipse(cx - 9, y, 18, 18),
-    line(cx, y + 18, [
-      [0, 0],
-      [0, 26],
-    ]),
-    line(cx - 16, y + 26, [
-      [0, 0],
-      [32, 0],
-    ]),
-    line(cx - 14, y + 44, [
-      [0, 20],
-      [14, 0],
-      [28, 20],
-    ]),
-    text(cx, y + 70, name, { center: true, id: nameId }),
-  ];
-  if (nameId) {
-    els.push(underline(nameId));
-  }
-  return els;
-};
-
-/** nota: rectángulo con la esquina superior derecha doblada */
-const noteShape = (x: number, y: number, value: string): Skeleton[] => {
-  const w = 170;
-  const h = 70;
-  const fold = 16;
-  return [
-    line(x, y, [
-      [0, 0],
-      [w - fold, 0],
-      [w, fold],
-      [w, h],
-      [0, h],
-      [0, 0],
-    ]),
-    line(x + w - fold, y, [
-      [0, 0],
-      [0, fold],
-      [fold, fold],
-    ]),
-    text(x + 10, y + 12, value, { size: SMALL }),
-  ];
-};
-
-/** íconos de las clases de análisis (Proceso Unificado, fig. 8.5) */
-const analysisIcon = (
-  x: number,
-  y: number,
-  kind: "boundary" | "entity" | "control",
-): Skeleton[] => {
-  const r = 20;
-  const cx = x + 30;
-  const cy = y + r;
-  const els: Skeleton[] = [ellipse(cx - r, y, r * 2, r * 2)];
-  if (kind === "boundary") {
-    els.push(
-      line(cx - r - 10, cy - 14, [
-        [0, 0],
-        [0, 28],
-      ]),
-      line(cx - r - 10, cy, [
-        [0, 0],
-        [10, 0],
-      ]),
-    );
-  } else if (kind === "entity") {
-    els.push(
-      line(cx - r, y + r * 2 + 3, [
-        [0, 0],
-        [r * 2, 0],
-      ]),
-    );
-  } else {
-    els.push(
-      line(cx - 1, y, [
-        [7, -5],
-        [0, 0],
-        [7, 5],
-      ]),
-    );
-  }
-  return els;
-};
-
-// relaciones horizontales: el origen está a la izquierda y el destino a la
-// derecha, así la multiplicidad y el rol quedan pegados al destino (CLA-07)
 const REL = 200;
 
 const relation = (opts: {
@@ -473,910 +332,270 @@ const upward = (opts: {
   return els;
 };
 
-const lifeline = (x: number, y: number, length = 240) =>
-  line(
-    x,
-    y,
-    [
-      [0, 0],
-      [0, length],
-    ],
-    { dashed: true },
-  );
-
-const tabbedFolder = (
-  x: number,
-  y: number,
-  opts: { name?: string; tabName?: string; body?: string; footer?: string },
+const cloud = (
+  name: string,
+  opts: { abstract?: boolean; object?: boolean; members?: string[] } = {},
 ): Skeleton[] => {
-  const els: Skeleton[] = [rect(x, y, 70, 20), rect(x, y + 20, 220, 110)];
-  if (opts.tabName) {
-    els.push(text(x + 8, y + 1, opts.tabName, { size: SMALL }));
+  const w = 270;
+  const h = opts.members?.length ? 170 : 125;
+  const pts: XY[] = [];
+  for (let i = 0; i <= 160; i++) {
+    const t = (2 * Math.PI * i) / 160;
+    const r = 0.91 + 0.09 * Math.cos(10 * t);
+    pts.push([
+      w / 2 + (w / 2) * r * Math.cos(t),
+      h / 2 + (h / 2) * r * Math.sin(t),
+    ]);
   }
-  if (opts.name) {
-    els.push(text(x + 110, y + 60, opts.name, { center: true }));
+  // Rough.js reinicia el patrón de guiones en cada segmento corto. Dibujar
+  // los huecos explícitamente evita que una nube muestre contorno continuo.
+  const outline = opts.object
+    ? [line(0, 0, pts)]
+    : pts.flatMap((start, i) =>
+        i % 4 === 0 && i < pts.length - 1
+          ? [
+              line(
+                start[0],
+                start[1],
+                pts
+                  .slice(i, i + 3)
+                  .map(([x, y]) => [x - start[0], y - start[1]]),
+              ),
+            ]
+          : [],
+      );
+  const els: Skeleton[] = [...outline, text(w / 2, 26, name, { center: true })];
+  if (opts.members?.length) {
+    els.push(
+      line(48, 51, [
+        [0, 0],
+        [w - 96, 0],
+      ]),
+      text(50, 59, opts.members.join("\n"), { size: SMALL }),
+    );
   }
-  if (opts.body) {
-    els.push(text(x + 12, y + 32, opts.body, { size: SMALL }));
-  }
-  if (opts.footer) {
-    els.push(text(x + 8, y + 106, opts.footer, { size: SMALL }));
+  if (opts.abstract) {
+    els.push(
+      line(81, h - 52, [
+        [0, 18],
+        [10, 0],
+        [20, 18],
+        [0, 18],
+      ]),
+      text(91, h - 45, "A", { size: 10, center: true }),
+    );
   }
   return els;
 };
 
-const MULTIPLICITIES: { value: string; hint: string }[] = [
-  { value: "1", hint: "Exactamente uno" },
-  { value: "0..1", hint: "Cero o uno" },
-  { value: "n", hint: "Muchos (cero o más). Booch escribe N; UML, *" },
-  { value: "0..n", hint: "Cero o más" },
-  { value: "1..n", hint: "Uno o más" },
-  { value: "n..m", hint: "Rango" },
-  { value: "*", hint: "Muchos, notación UML (libro del Proceso Unificado)" },
-  { value: "1..*", hint: "Uno o más, notación UML" },
-];
-
-const note = (id: string): DiagramPiece => ({
-  id,
-  name: "Nota",
-  hint: "Esquina doblada; se une al elemento con línea discontinua sin puntas. Sin unir, comenta todo el diagrama.",
-  keywords: "comentario",
-  build: () => [
-    ...noteShape(0, 0, "Comentario"),
-    line(
-      -70,
-      35,
-      [
-        [0, 0],
-        [70, 0],
-      ],
-      { dashed: true },
-    ),
-  ],
-});
-
-// ---------------------------------------------------------------------------
-// secciones
-// ---------------------------------------------------------------------------
+const piece = (
+  id: string,
+  name: string,
+  hint: string,
+  build: DiagramPiece["build"],
+): DiagramPiece => ({ id, name, hint, build });
 
 export const DIAGRAM_SECTIONS: DiagramSection[] = [
   {
-    id: "clases",
-    title: "Diagrama de clases",
-    description: "Clases, atributos, operaciones y sus relaciones.",
+    id: "booch-clases",
+    title: "Booch · clases",
     icon: "clases",
+    description: "2.ª edición · capítulo 5 · nubes, posesión y uso",
     groups: [
       {
-        title: "Clases",
+        title: "Clases y objetos",
         pieces: [
-          {
-            id: "clase",
-            name: "Clase",
-            hint: "Nombre / atributos / operaciones. Operaciones con (), atributos sin (CLA-03).",
-            build: () =>
-              classBox(0, 0, "Clase", {
-                attributes: ["- atributo : Tipo"],
-                operations: ["+ operacion() : Tipo"],
+          piece(
+            "booch-clase",
+            "Clase",
+            "Booch, figura 5.2, p. 205. Nube discontinua; adaptación editable.",
+            () =>
+              cloud("Clase", { members: ["atributo : Tipo", "operacion()"] }),
+          ),
+          piece(
+            "booch-simple",
+            "Clase solo nombre",
+            "Booch, p. 206: omitir miembros y separador cuando no son necesarios.",
+            () => cloud("Clase"),
+          ),
+          piece(
+            "booch-abstracta",
+            "Clase abstracta",
+            "Booch, figura 5.3, p. 207. Triángulo A dentro de la nube.",
+            () =>
+              cloud("Actuador", {
+                abstract: true,
+                members: ["activar()", "desactivar()"],
               }),
-          },
-          {
-            id: "clase-simple",
-            name: "Clase (solo nombre)",
-            hint: "Sin miembros se elimina la línea de separación.",
-            build: () => [rect(0, 0, 180, 50, { label: "Clase" })],
-          },
-          {
-            id: "clase-abstracta",
-            name: "Clase abstracta",
-            hint: "Nombre en cursiva (UML). Excalidraw no tiene cursiva: se marca con {abstract} (CLA-02).",
-            keywords: "abstract",
-            build: () =>
-              classBox(0, 0, "ClaseAbstracta", {
-                nameNote: "{abstract}",
-                attributes: ["# atributo : Tipo"],
-                operations: ["+ operacion() : Tipo"],
+          ),
+          piece(
+            "booch-objeto",
+            "Objeto",
+            "Booch, capítulo 5.4, pp. 239-248. Nube continua, no rectángulo UML.",
+            () => cloud("unSensor", { object: true, members: ["valor = 20"] }),
+          ),
+          piece(
+            "booch-visibilidad",
+            "Visibilidad",
+            "Booch, figura 5.12, p. 218. Público sin marca; protegido |, privado ||, implementación |||.",
+            () =>
+              cloud("Cosecha", {
+                members: [
+                  "nombreCientifico",
+                  "| produccion",
+                  "|| valorNutritivo",
+                ],
               }),
-          },
-          {
-            id: "interfaz",
-            name: "Interfaz",
-            hint: "Círculo pequeño («piruleta») con el nombre debajo.",
-            keywords: "interface piruleta",
-            build: () => [
-              ellipse(0, 0, 26, 26),
-              text(13, 32, "IInterfaz", { center: true }),
-            ],
-          },
-          {
-            id: "clase-activa",
-            name: "Clase activa",
-            hint: "Borde grueso: sus instancias tienen hilo de control propio.",
-            build: () => classBox(0, 0, "ClaseActiva", { strokeWidth: 4 }),
-          },
+          ),
         ],
       },
       {
         title: "Relaciones",
         pieces: [
-          {
-            id: "asociacion",
-            name: "Asociación",
-            hint: "Línea continua sin puntas. Multiplicidad en UN solo extremo: el de destino (CLA-07).",
-            build: () =>
-              relation({ end: null, name: "nombre", multiplicity: "1" }),
-          },
-          {
-            id: "asociacion-navegable",
-            name: "Asociación navegable",
-            hint: "Flecha abierta hacia la clase conocida. Rol arriba y multiplicidad abajo, solo en el destino (CLA-07).",
-            keywords: "dirigida",
-            build: () =>
-              relation({
-                end: "arrow",
-                name: "nombre",
-                role: "rol",
-                multiplicity: "0..n",
-              }),
-          },
-          {
-            id: "asociacion-doble",
-            name: "Asociación en ambos sentidos",
-            hint: "Si hace falta multiplicidad de los dos lados: DOS flechas, cada una con su multiplicidad en su destino (CLA-08).",
-            keywords: "bidireccional dos flechas",
-            build: () => [
-              ...relation({ end: "arrow", name: "nombre", multiplicity: "1" }),
-              ...relation({
-                end: "arrow",
-                name: "nombre inverso",
-                multiplicity: "0..n",
-                y: 60,
-                reverse: true,
-              }),
-            ],
-          },
-          {
-            id: "generalizacion",
-            name: "Generalización",
-            hint: "Triángulo hueco en la superclase, sin multiplicidad (CLA-05, CLA-06). Superclase arriba.",
-            keywords: "herencia es un",
-            build: () => upward({ end: "triangle_outline" }),
-          },
-          {
-            id: "agregacion",
-            name: "Agregación",
-            hint: "Rombo vacío del lado del TODO; multiplicidad del lado de la parte (CLA-09).",
-            keywords: "todo parte tiene",
-            build: () =>
-              relation({
-                start: "diamond_outline",
-                end: null,
-                multiplicity: "1..n",
-              }),
-          },
-          {
-            id: "composicion",
-            name: "Composición",
-            hint: "Rombo relleno del lado del TODO; la parte vive y muere con él (CLA-09, CLA-10).",
-            keywords: "todo parte",
-            build: () =>
-              relation({ start: "diamond", end: null, multiplicity: "1..n" }),
-          },
-          {
-            id: "dependencia",
-            name: "Dependencia (uso)",
-            hint: "Discontinua con flecha abierta hacia el proveedor: parámetro, retorno o variable local (CLA-15).",
-            keywords: "uso usa",
-            build: () => relation({ end: "arrow", dashed: true }),
-          },
-          {
-            id: "realizacion",
-            name: "Realización",
-            hint: "Clase → interfaz. Discontinua con triángulo hueco. No está dibujada en los libros (UML general).",
-            keywords: "implementa interfaz",
-            build: () => upward({ end: "triangle_outline", dashed: true }),
-          },
-          {
-            id: "clase-asociacion",
-            name: "Clase de asociación",
-            hint: "Cuelga de la asociación con línea discontinua. Máximo una por asociación (CLA-11).",
-            keywords: "asociacion atribuida",
-            build: () => [
-              line(0, 0, [
-                [0, 0],
-                [REL, 0],
-              ]),
-              line(
-                REL / 2,
-                0,
-                [
-                  [0, 0],
-                  [0, 50],
-                ],
-                { dashed: true },
-              ),
-              rect(REL / 2 - 80, 50, 160, 44, { label: "ClaseAsociacion" }),
-            ],
-          },
-        ],
-      },
-      {
-        title: "Multiplicidad, roles y restricciones",
-        pieces: [
-          ...MULTIPLICITIES.map(
-            (m): DiagramPiece => ({
-              id: `mult-${m.value}`,
-              name: m.value,
-              hint: `${m.hint}. Va junto al extremo de destino (CLA-07).`,
-              keywords: "multiplicidad cardinalidad",
-              build: () => [text(0, 0, m.value)],
-            }),
+          piece(
+            "booch-asociacion",
+            "Asociación",
+            "Booch, pp. 125-126 y 208. Línea continua; sin flechas implica bidireccionalidad.",
+            () => relation({ end: null, name: "relación" }),
           ),
-          {
-            id: "rol",
-            name: "Rol",
-            hint: "Junto a la clase que cumple el papel, arriba de la línea.",
-            build: () => [text(0, 0, "rol", { size: SMALL })],
-          },
-          {
-            id: "restriccion",
-            name: "Restricción",
-            hint: "Entre llaves, junto a la clase o la relación (CLA-20).",
-            build: () => [text(0, 0, "{restricción}", { size: SMALL })],
-          },
-          note("clases-nota"),
+          piece(
+            "booch-herencia",
+            "Herencia",
+            "Booch, figura 5.4, p. 207. Punta rellena hacia la superclase.",
+            () => upward({ end: "triangle" }),
+          ),
+          piece(
+            "booch-posesion",
+            "Posesión",
+            "Booch, figura 5.4, p. 207. Círculo relleno del lado del TODO.",
+            () => relation({ start: "circle", end: null, multiplicity: "N" }),
+          ),
+          piece(
+            "booch-uso",
+            "Uso",
+            "Booch, figura 5.4, p. 207. Circunferencia hueca del lado del CLIENTE.",
+            () => relation({ start: "circle_outline", end: null }),
+          ),
         ],
       },
       {
-        title: "Clases de análisis",
-        pieces: (
-          [
-            [
-              "boundary",
-              "Clase de interfaz",
-              "«boundary». Asociada al menos a un actor (CLA-19).",
-            ],
-            [
-              "entity",
-              "Clase de entidad",
-              "«entity». Información de vida larga, persistente.",
-            ],
-            [
-              "control",
-              "Clase de control",
-              "«control». Coordina un caso de uso.",
-            ],
-          ] as const
-        ).map(
-          ([kind, name, hint]): DiagramPiece => ({
-            id: `analisis-${kind}`,
-            name,
-            hint,
-            keywords: `${kind} analisis`,
-            build: () => [
-              ...analysisIcon(0, 0, kind),
-              text(30, 50, name.replace("Clase de ", ""), { center: true }),
-            ],
-          }),
+        title: "Cardinalidad",
+        pieces: ["1", "N", "0..N", "1..N", "0..1", "3..7", "1..3, 7"].map((v) =>
+          piece(
+            `booch-mult-${v}`,
+            v,
+            "Booch, p. 208. Cardinalidad junto al extremo que describe; no trasladar el número de partes al todo.",
+            () => [text(0, 0, v)],
+          ),
         ),
       },
-      {
-        title: "Notación Booch (libro A)",
-        pieces: [
-          {
-            id: "booch-posesion",
-            name: "Posesión (Booch)",
-            hint: "Agregación de Booch: círculo relleno del lado del todo.",
-            keywords: "agregacion has tiene booch",
-            build: () =>
-              relation({ start: "circle", end: null, multiplicity: "N" }),
-          },
-          {
-            id: "booch-uso",
-            name: "Uso (Booch)",
-            hint: "Circunferencia hueca del lado del CLIENTE (al revés que la dependencia UML).",
-            keywords: "using booch",
-            build: () => relation({ start: "circle_outline", end: null }),
-          },
-          {
-            id: "booch-herencia",
-            name: "Herencia (Booch)",
-            hint: "Punta rellena hacia la superclase. En UML se usa el triángulo hueco.",
-            keywords: "generalizacion booch",
-            build: () => upward({ end: "triangle" }),
-          },
-          {
-            id: "booch-abstracta",
-            name: "Clase abstracta (Booch)",
-            hint: "Triángulo con una A dentro del ícono de la clase.",
-            keywords: "abstract booch",
-            build: () => [
-              ...classBox(0, 0, "Actuador", {
-                operations: ["activar()", "desactivar()"],
-              }),
-              line(8, 88, [
-                [0, 18],
-                [10, 0],
-                [20, 18],
-                [0, 18],
-              ]),
-              text(18, 94, "A", { size: 10, center: true }),
-            ],
-          },
-        ],
-      },
     ],
   },
   {
-    id: "objetos",
-    title: "Diagrama de objetos",
-    description: "Instancias, enlaces y mensajes numerados (colaboración).",
-    icon: "objetos",
+    id: "patrones-clases",
+    title: "Patrones de diseño · OMT",
+    icon: "clases",
+    description: "Apéndice B · figura B.1 · PDF 411 a 414",
     groups: [
       {
+        title: "Clases y objetos",
         pieces: [
-          {
-            id: "objeto",
-            name: "Objeto",
-            hint: "Nombre subrayado: nombre : Clase (OBJ-03).",
-            keywords: "instancia",
-            build: () => objectBox(0, 0, "nombre : Clase", "o"),
-          },
-          {
-            id: "objeto-anonimo",
-            name: "Objeto anónimo",
-            hint: ":Clase subrayado. Cada objeto anónimo es un objeto distinto.",
-            build: () => objectBox(0, 0, ":Clase", "o", { width: 150 }),
-          },
-          {
-            id: "objeto-atributos",
-            name: "Objeto con atributos",
-            hint: "Atributos con su valor.",
-            build: () =>
-              objectBox(0, 0, "nombre : Clase", "o", {
-                attributes: ["atributo = valor"],
+          piece(
+            "omt-clase",
+            "Clase concreta",
+            "Figura B.1a. Nombre, operaciones y variables. Adaptación editable: Excalidraw no conserva la negrita del original.",
+            () =>
+              classBox(0, 0, "ClaseConcreta", {
+                attributes: ["Operacion()"],
+                operations: ["Tipo variable"],
               }),
-          },
-          {
-            id: "enlace",
-            name: "Enlace",
-            hint: "Línea continua. Solo si existe una asociación entre las clases (OBJ-01).",
-            build: () => [
-              line(0, 0, [
-                [0, 0],
-                [REL, 0],
-              ]),
-            ],
-          },
-          {
-            id: "mensaje-enlace",
-            name: "Mensaje numerado",
-            hint: "Flecha corta paralela al enlace, hacia el receptor. Numerado desde 1 (OBJ-04, OBJ-05).",
-            keywords: "colaboracion secuencia",
-            build: () => [
-              line(0, 0, [
-                [0, 0],
-                [REL, 0],
-              ]),
-              arrow(70, -12, [
-                [0, 0],
-                [60, 0],
-              ]),
-              text(REL / 2, -38, "1: operacion()", {
-                center: true,
-                size: SMALL,
-              }),
-            ],
-          },
-          {
-            id: "actor-objeto",
-            name: "Actor",
-            hint: "En colaboración, el actor lleva :Nombre subrayado.",
-            build: () => stickFigure(0, 0, ":Actor", { underlineKey: "a" }),
-          },
-          ...(
-            [
-              ["boundary", ":Interfaz"],
-              ["entity", ":Entidad"],
-              ["control", ":Control"],
-            ] as const
-          ).map(
-            ([kind, name]): DiagramPiece => ({
-              id: `objeto-${kind}`,
-              name: `Objeto de ${
-                kind === "boundary"
-                  ? "interfaz"
-                  : kind === "entity"
-                  ? "entidad"
-                  : "control"
-              }`,
-              hint: "En análisis, el objeto se dibuja con el ícono de su estereotipo.",
-              keywords: `${kind} analisis colaboracion`,
-              build: () => [
-                ...analysisIcon(0, 0, kind),
-                text(30, 50, name, { center: true, id: `${kind}-name` }),
-                underline(`${kind}-name`),
-              ],
-            }),
           ),
-          note("objetos-nota"),
-        ],
-      },
-    ],
-  },
-  {
-    id: "casos-de-uso",
-    title: "Diagrama de casos de uso",
-    description: "Actores y las funcionalidades que usan.",
-    icon: "casos",
-    groups: [
-      {
-        pieces: [
-          {
-            id: "actor",
-            name: "Actor",
-            hint: "Un rol externo al sistema (persona, sistema, dispositivo) (CU-03).",
-            build: () => stickFigure(0, 0, "Actor"),
-          },
-          {
-            id: "caso-de-uso",
-            name: "Caso de uso",
-            hint: "Elipse; verbo + objeto. Debe dar un resultado de valor a un actor (CU-01).",
-            build: () => [ellipse(0, 0, 190, 70, { label: "Caso de uso" })],
-          },
-          {
-            id: "asociacion-actor",
-            name: "Asociación actor–caso",
-            hint: "Línea continua sin flechas (CU-02).",
-            keywords: "comunicacion",
-            build: () => [
-              line(0, 0, [
-                [0, 0],
-                [160, 0],
-              ]),
+          piece(
+            "omt-abstracta",
+            "Clase abstracta",
+            "Figura B.1a: el nombre y las operaciones abstractas van en cursiva. Para fidelidad tipográfica usar la figura original con consultar_libro.",
+            () =>
+              classBox(0, 0, "ClaseAbstracta", {
+                attributes: ["OperacionAbstracta()"],
+              }),
+          ),
+          piece(
+            "omt-cliente",
+            "Cliente implícito",
+            "Figura B.1b. Cliente gris: participa solo para explicar la interacción.",
+            () => [
+              { ...rect(0, 0, 160, 48), strokeColor: "#999999" },
+              {
+                ...text(80, 12, "Cliente", { center: true }),
+                strokeColor: "#999999",
+              },
             ],
-          },
-          {
-            id: "cu-generalizacion",
-            name: "Generalización",
-            hint: "Triángulo hueco del lado del caso general (abstracto) (CU-06).",
-            keywords: "herencia uses",
-            build: () => relation({ end: "triangle_outline" }),
-          },
-          {
-            id: "cu-extend",
-            name: "«extend»",
-            hint: "Discontinua, apunta al caso de uso BASE (el extendido) (CU-05).",
-            keywords: "extension",
-            build: () =>
-              relation({ end: "arrow", dashed: true, name: "«extend»" }),
-          },
-          {
-            id: "cu-include",
-            name: "«include»",
-            hint: "Discontinua, del caso base al incluido. El libro casi no lo dibuja (UML general).",
-            keywords: "inclusion",
-            build: () =>
-              relation({ end: "arrow", dashed: true, name: "«include»" }),
-          },
-          {
-            id: "limite-sistema",
-            name: "Límite del sistema",
-            hint: "Los libros no lo dibujan (UML general). Actores afuera, casos adentro.",
-            keywords: "sistema frontera",
-            build: () => [
-              rect(0, 0, 340, 240),
-              text(170, 10, "Sistema", { center: true }),
-            ],
-          },
-          {
-            id: "realizacion-cu",
-            name: "Realización de caso de uso",
-            hint: "Elipse discontinua; se une al caso de uso con «trace».",
-            keywords: "colaboracion trace",
-            build: () => [
-              ellipse(0, 0, 190, 70, { dashed: true, label: "Realización" }),
-            ],
-          },
-          {
-            id: "actor-generalizacion",
-            name: "Generalización de actores",
-            hint: "Triángulo hueco hacia el actor general. No está en los libros (UML general).",
-            build: () => upward({ end: "triangle_outline" }),
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "secuencia",
-    title: "Diagrama de secuencia",
-    description: "Interacción entre objetos a lo largo del tiempo.",
-    icon: "secuencia",
-    groups: [
-      {
-        pieces: [
-          {
-            id: "linea-de-vida",
-            name: "Objeto con línea de vida",
-            hint: "Cabecera con el objeto subrayado y línea vertical discontinua (SEC-02, SEC-04).",
-            keywords: "lifeline participante",
-            build: () => [
-              ...objectBox(0, 0, ":Clase", "o", { width: 140 }),
-              lifeline(70, 38),
-            ],
-          },
-          {
-            id: "actor-linea-de-vida",
-            name: "Actor con línea de vida",
-            hint: "El actor que inicia va a la izquierda (SEC-06).",
-            build: () => [
-              ...stickFigure(0, 0, ":Actor", { underlineKey: "a" }),
-              lifeline(20, 96, 200),
-            ],
-          },
-          {
-            id: "activacion",
-            name: "Foco de control",
-            hint: "Rectángulo angosto sobre la línea de vida mientras el objeto tiene el control.",
-            keywords: "activacion",
-            build: () => [rect(0, 0, 14, 110, { fill: "#ffffff" })],
-          },
-          {
-            id: "mensaje",
-            name: "Mensaje",
-            hint: "Línea continua con punta rellena, del emisor al receptor (SEC-03).",
-            keywords: "llamada sincrono",
-            build: () => [
-              arrow(
-                0,
-                0,
-                [
-                  [0, 0],
-                  [REL, 0],
-                ],
-                { end: "triangle" },
-              ),
-              text(REL / 2, -24, "operacion()", { center: true }),
-            ],
-          },
-          {
-            id: "retorno",
-            name: "Retorno",
-            hint: "Línea discontinua con punta abierta hacia el llamador (SEC-07).",
-            build: () => [
-              arrow(
-                REL,
-                0,
-                [
-                  [0, 0],
-                  [-REL, 0],
-                ],
-                { dashed: true },
-              ),
-              text(REL / 2, -24, "resultado", { center: true, size: SMALL }),
-            ],
-          },
-          {
-            id: "mensaje-a-si-mismo",
-            name: "Mensaje a sí mismo",
-            hint: "Sale y vuelve a la misma línea de vida.",
-            keywords: "recursion",
-            build: () => [
-              arrow(
-                0,
-                0,
-                [
-                  [0, 0],
-                  [50, 0],
-                  [50, 36],
-                  [0, 36],
-                ],
-                { end: "triangle" },
-              ),
-              text(58, 8, "operacion()", { size: SMALL }),
-            ],
-          },
-          {
-            id: "creacion",
-            name: "Creación «create»",
-            hint: "La flecha termina en la cabecera del objeto nuevo, más abajo que las demás.",
-            keywords: "crear create",
-            build: () => [
-              arrow(
-                0,
-                20,
-                [
-                  [0, 0],
-                  [160, 0],
-                ],
-                { end: "triangle" },
-              ),
-              text(80, -4, "«create»", { center: true, size: SMALL }),
-              ...objectBox(164, 0, "p : Clase", "o", { width: 130 }),
-              lifeline(229, 38, 140),
-            ],
-          },
-          {
-            id: "destruccion",
-            name: "Destrucción «destroy»",
-            hint: "Mensaje «destroy» y una X al final de la línea de vida.",
-            keywords: "destruir destroy",
-            build: () => [
-              lifeline(200, -80, 80),
-              arrow(
-                0,
-                0,
-                [
-                  [0, 0],
-                  [188, 0],
-                ],
-                { end: "triangle" },
-              ),
-              text(94, -24, "«destroy»", { center: true, size: SMALL }),
-              line(
-                188,
-                -12,
-                [
-                  [0, 0],
-                  [24, 24],
-                ],
-                { strokeWidth: 2 },
-              ),
-              line(
-                188,
-                -12,
-                [
-                  [0, 24],
-                  [24, 0],
-                ],
-                { strokeWidth: 2 },
-              ),
-            ],
-          },
-          {
-            id: "guion",
-            name: "Guión (Booch)",
-            hint: "Condiciones e iteraciones escritas a la izquierda, alineadas con los mensajes.",
-            keywords: "condicion script booch",
-            build: () => [
-              text(
-                0,
-                0,
-                "Si condición entonces\n  mensaje\nsino\n  otro mensaje",
-                {
-                  size: SMALL,
-                },
-              ),
-            ],
-          },
-          {
-            id: "fragmento",
-            name: "Fragmento alt / loop",
-            hint: "No está en los libros (UML 2). Los libros usan el guión de la izquierda.",
-            keywords: "alt loop opt condicion",
-            build: () => [
-              rect(0, 0, 320, 170),
-              line(0, 0, [
-                [0, 0],
-                [0, 24],
-                [44, 24],
-                [54, 14],
-                [54, 0],
-              ]),
-              text(8, 3, "alt", { size: SMALL }),
-              text(64, 30, "[condición]", { size: SMALL }),
-              line(
-                0,
-                90,
-                [
-                  [0, 0],
-                  [320, 0],
-                ],
-                { dashed: true },
-              ),
-              text(64, 96, "[sino]", { size: SMALL }),
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "estados",
-    title: "Diagrama de estados",
-    description: "Estados de un objeto y sus transiciones.",
-    icon: "estados",
-    groups: [
-      {
-        pieces: [
-          {
-            id: "estado",
-            name: "Estado",
-            hint: "Rectángulo redondeado. Nombre único en su ámbito (EST-03).",
-            build: () => [
-              rect(0, 0, 150, 54, { rounded: true, label: "Estado" }),
-            ],
-          },
-          {
-            id: "estado-acciones",
-            name: "Estado con acciones",
-            hint: "Nombre, línea y acciones: entrada / salida / hacer.",
-            keywords: "entry exit do",
-            build: () => [
-              rect(0, 0, 210, 100, { rounded: true }),
-              text(105, 8, "Estado", { center: true }),
-              line(0, 36, [
+          ),
+          piece(
+            "omt-objeto",
+            "Objeto",
+            "Apéndice B.2. Rectángulo redondeado, nombre unAlgo, sin subrayado UML.",
+            () => [
+              rect(0, 0, 210, 90, { rounded: true }),
+              text(105, 12, "unAlgo", { center: true }),
+              line(0, 39, [
                 [0, 0],
                 [210, 0],
               ]),
-              text(10, 44, "entrada acción\nsalida acción\nhacer actividad", {
-                size: SMALL,
-              }),
+              text(10, 50, "referencia"),
             ],
-          },
-          {
-            id: "estado-inicial",
-            name: "Estado inicial",
-            hint: "Círculo relleno. Exactamente uno, con transición sin etiqueta (EST-01).",
-            build: () => [ellipse(0, 0, 22, 22, { fill: INK })],
-          },
-          {
-            id: "estado-final",
-            name: "Estado final",
-            hint: "Círculo relleno dentro de otro hueco.",
-            keywords: "parada",
-            build: () => [
-              ellipse(0, 0, 28, 28),
-              ellipse(6, 6, 16, 16, { fill: INK }),
-            ],
-          },
-          {
-            id: "transicion",
-            name: "Transición",
-            hint: "Flecha abierta. Etiqueta: evento [condición] / acción (EST-06).",
-            keywords: "evento guarda",
-            build: () => [
-              arrow(0, 0, [
-                [0, 0],
-                [240, 0],
-              ]),
-              text(120, -24, "evento [condición] / acción", {
-                center: true,
-                size: SMALL,
-              }),
-            ],
-          },
-          {
-            id: "superestado",
-            name: "Superestado",
-            hint: "Estado compuesto: está en exactamente uno de sus subestados.",
-            keywords: "compuesto subestado anidado",
-            build: () => [
-              rect(0, 0, 380, 190, { rounded: true }),
-              text(14, 8, "Superestado"),
-              ellipse(24, 92, 18, 18, { fill: INK }),
-              arrow(44, 101, [
-                [0, 0],
-                [36, 0],
-              ]),
-              rect(82, 74, 110, 54, { rounded: true, label: "Subestado A" }),
-              arrow(194, 101, [
-                [0, 0],
-                [58, 0],
-              ]),
-              rect(254, 74, 110, 54, { rounded: true, label: "Subestado B" }),
-            ],
-          },
-          {
-            id: "historia",
-            name: "Historia",
-            hint: "H dentro de un círculo, dentro del superestado. H* para todos los niveles.",
-            build: () => [ellipse(0, 0, 30, 30, { label: "H" })],
-          },
-          note("estados-nota"),
+          ),
         ],
       },
-    ],
-  },
-  {
-    id: "paquetes",
-    title: "Diagrama de paquetes",
-    description: "Categorías de clases y sus dependencias.",
-    icon: "paquetes",
-    groups: [
       {
+        title: "Relaciones",
         pieces: [
-          {
-            id: "paquete",
-            name: "Paquete",
-            hint: "Carpeta con pestaña. Nombre único y distinto al de cualquier clase (PAQ-02).",
-            keywords: "categoria",
-            build: () => tabbedFolder(0, 0, { name: "Paquete" }),
-          },
-          {
-            id: "paquete-clases",
-            name: "Paquete con clases",
-            hint: "Nombre en la pestaña y las clases «interesantes» adentro.",
-            keywords: "categoria",
-            build: () =>
-              tabbedFolder(0, 0, {
-                tabName: "Paquete",
-                body: "ClaseA\nClaseB",
-              }),
-          },
-          {
-            id: "paquete-global",
-            name: "Paquete global (Booch)",
-            hint: "global abajo a la izquierda: lo usan todas las demás categorías.",
-            build: () =>
-              tabbedFolder(0, 0, { name: "Paquete", footer: "global" }),
-          },
-          {
-            id: "paquete-dependencia",
-            name: "Dependencia",
-            hint: "Entre paquetes solo hay «utiliza»: discontinua con flecha abierta.",
-            keywords: "utiliza uso",
-            build: () => relation({ end: "arrow", dashed: true }),
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "fisicos",
-    title: "Componentes y despliegue",
-    description: "Componentes, nodos y sus dependencias.",
-    icon: "fisicos",
-    groups: [
-      {
-        pieces: [
-          {
-            id: "componente",
-            name: "Componente",
-            hint: "Rectángulo con dos rectángulos chicos a la izquierda.",
-            build: () => [
-              rect(0, 0, 170, 80, { label: "componente" }),
-              rect(-14, 14, 28, 14, { fill: "#ffffff" }),
-              rect(-14, 44, 28, 14, { fill: "#ffffff" }),
+          piece(
+            "omt-herencia",
+            "Herencia",
+            "Figura B.1c. Triángulo hueco hacia la clase padre.",
+            () => upward({ end: "triangle_outline" }),
+          ),
+          piece(
+            "omt-asociacion",
+            "Referencia",
+            "Figura B.1c. Flecha hacia la clase referenciada.",
+            () => relation({ end: "arrow" }),
+          ),
+          piece(
+            "omt-agregacion",
+            "Agregación",
+            "Figura B.1c. Rombo hueco en la base, flecha hacia la parte referenciada.",
+            () => relation({ start: "diamond_outline", end: "arrow" }),
+          ),
+          piece(
+            "omt-muchos",
+            "Muchos objetos",
+            "Figura B.1c y PDF 414. Círculo relleno junto al objeto referenciado, después de la flecha; no es posesión de Booch.",
+            () => [
+              arrow(
+                0,
+                0,
+                [
+                  [0, 0],
+                  [184, 0],
+                ],
+                { start: "diamond_outline", end: "arrow" },
+              ),
+              ellipse(190, -4, 8, 8, { fill: INK }),
             ],
-          },
-          {
-            id: "nodo",
-            name: "Nodo",
-            hint: "Cubo 3D: un recurso de cómputo (servidor, dispositivo).",
-            keywords: "servidor despliegue",
-            build: () => [
-              rect(0, 18, 170, 90, { label: "Nodo" }),
-              line(0, 0, [
-                [0, 18],
-                [18, 0],
-                [188, 0],
-                [170, 18],
-              ]),
-              line(170, 0, [
-                [18, 0],
-                [18, 90],
-                [0, 108],
-              ]),
-            ],
-          },
-          {
-            id: "fisico-dependencia",
-            name: "Dependencia",
-            hint: "Hacia el elemento del que se depende. Sin ciclos (MOD-01).",
-            keywords: "compilacion",
-            build: () => relation({ end: "arrow", dashed: true }),
-          },
+          ),
+          piece(
+            "omt-crea",
+            "Crea instancia",
+            "Apéndice B.1, PDF 414. Flecha discontinua hacia la clase creada.",
+            () => relation({ end: "arrow", dashed: true }),
+          ),
         ],
       },
     ],
   },
 ];
-
-// ---------------------------------------------------------------------------
-// conversión a elementos de Excalidraw
-// ---------------------------------------------------------------------------
-
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 const finishPiece = (
